@@ -432,21 +432,17 @@ Windows 端可用 `tools/test_net_guard_windows.py` 透過 SSH 測試遠端 Ubun
 
 - Windows 已安裝 Python 3
 - Windows OpenSSH 可用，也就是 `ssh` 與 `scp` 指令可執行
-- Ubuntu 遠端已部署專案到 `/home/andy/core-net-shield`
+- Ubuntu 遠端已部署專案
 - Ubuntu 遠端已載入 `net_guard.ko`
 
 執行：
 
 ```powershell
-cd "C:\Users\andyl\Downloads\Linux Kernel Module\Linux Kernel Module"
-python .\tools\test_net_guard_windows.py --host 192.168.64.129 --user andy --sudo-password andy
+cd path\to\core-net-shield
+python .\tools\test_net_guard_windows.py --host <ubuntu-ip> --user <ssh-user> --sudo-password <sudo-password>
 ```
 
-如果沒有設定 SSH key，執行過程中 Windows 會要求輸入 SSH 密碼。輸入：
-
-```text
-andy
-```
+如果沒有設定 SSH key，執行過程中 Windows 會要求輸入 SSH 密碼。
 
 測試內容：
 
@@ -467,29 +463,4 @@ TEST1 temporary block cleanup: PASS
 TEST2 permaban survives cleanup: PASS
 TEST3 manual unban clears rule and db: PASS
 ALL TESTS PASSED
-```
-
-## 目前遠端部署紀錄
-
-本專案已在以下環境測試通過：
-
-```text
-Host: 192.168.64.129
-User: andy
-Kernel: 5.4.0-150-generic
-Deploy path: /home/andy/core-net-shield
-Module: /home/andy/core-net-shield/kernel/net_guard.ko
-```
-
-已驗證：
-
-```text
-make 編譯成功
-insmod 載入成功
-/proc/net_guard 顯示正常
-autoblock.sh 封鎖成功
-cleanup.sh 解除一般封鎖成功
-PERMABANNED 不被 cleanup 解除
-unban.sh 可清除單一 IP
-root crontab 已加入 autoblock/cleanup 排程
 ```

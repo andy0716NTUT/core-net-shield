@@ -26,6 +26,7 @@ net_guard/
 ├── scripts/
 │   ├── autoblock.sh        # 讀 alert.log，統計違規，封鎖/永久封鎖 IP
 │   ├── cleanup.sh          # 解除逾時封鎖；永久封鎖不自動解除
+│   ├── netguardctl.sh      # Net Guard 管理指令
 │   └── unban.sh            # 手動解除單一 IP 或全部封鎖
 ├── tools/
 │   └── test_net_guard_windows.py  # Windows 端 SSH 自動測試腳本
@@ -160,6 +161,58 @@ sudo crontab -e
 sudo crontab -l
 ```
 
+## netguardctl 管理指令
+
+專案提供 `scripts/netguardctl.sh` 作為管理指令，避免每次都手動 `cat /proc/net_guard` 或直接讀 log 檔。
+
+可先直接執行：
+
+```bash
+sudo /home/andy/core-net-shield/scripts/netguardctl.sh status
+sudo /home/andy/core-net-shield/scripts/netguardctl.sh violations
+sudo /home/andy/core-net-shield/scripts/netguardctl.sh unban 203.0.113.20
+```
+
+也可以安裝成全域指令：
+
+```bash
+sudo ln -sf /home/andy/core-net-shield/scripts/netguardctl.sh /usr/local/bin/netguardctl
+sudo chmod +x /home/andy/core-net-shield/scripts/netguardctl.sh
+```
+
+之後就能直接使用：
+
+```bash
+netguardctl status
+netguardctl alerts 30
+netguardctl blocks 30
+sudo netguardctl ban 203.0.113.10
+sudo netguardctl unban 203.0.113.10
+```
+
+常用指令：
+
+| 指令 | 說明 |
+|---|---|
+| `netguardctl status` | 顯示 `/proc/net_guard` 狀態 |
+| `netguardctl alerts [n]` | 顯示最後 n 行 `alert.log`，預設 20 |
+| `netguardctl blocks [n]` | 顯示最後 n 行 `block.log`，預設 20 |
+| `netguardctl violations` | 顯示 `violations.db` |
+| `netguardctl banned` | 只列出目前封鎖 IP |
+| `sudo netguardctl ban <ip>` | 手動封鎖 IP |
+| `sudo netguardctl unban <ip>` | 手動解除單一 IP，並清除違規紀錄 |
+| `sudo netguardctl unban-all` | 解除所有追蹤與封鎖 |
+| `sudo netguardctl run-autoblock` | 手動跑一次 `autoblock.sh` |
+| `sudo netguardctl run-cleanup` | 手動跑一次 `cleanup.sh` |
+| `netguardctl logs` | 顯示 Net Guard 相關 log 路徑 |
+| `sudo netguardctl reset-logs` | 清空 alert/block/violations/offset |
+| `sudo netguardctl load` | 透過 Makefile 載入模組 |
+| `sudo netguardctl unload` | 透過 Makefile 卸載模組 |
+| `sudo netguardctl reload` | 重新載入模組 |
+| `sudo netguardctl cron` | 顯示 Net Guard 的 root crontab |
+| `sudo netguardctl install-cron` | 安裝 autoblock/cleanup 排程 |
+| `sudo netguardctl remove-cron` | 移除 autoblock/cleanup 排程 |
+
 ## 功能對照表
 
 | 編號 | 說明 | 實作位置 |
@@ -197,11 +250,12 @@ sudo crontab -l
 | 31 | 永久封鎖不自動解除 | `scripts/cleanup.sh` |
 | 32 | 手動解除單一 IP | `scripts/unban.sh` |
 | 33 | 手動解除所有追蹤 IP | `scripts/unban.sh` |
-| 34 | 建立 `/proc/net_guard` | `proc_interface.c: proc_interface_init()` |
-| 35 | 顯示系統狀態 | `proc_interface.c: net_guard_proc_show()` |
-| 36 | 顯示偵測次數 | `proc_interface.c: net_guard_proc_show()` |
-| 37 | 顯示目前封鎖 IP | `proc_interface.c: net_guard_proc_show()` |
-| 38 | 讓 userspace 腳本用 `+IP` / `-IP` 同步封鎖清單 | `proc_interface.c: net_guard_proc_write()` |
+| 34 | 管理指令 `netguardctl` | `scripts/netguardctl.sh` |
+| 35 | 建立 `/proc/net_guard` | `proc_interface.c: proc_interface_init()` |
+| 36 | 顯示系統狀態 | `proc_interface.c: net_guard_proc_show()` |
+| 37 | 顯示偵測次數 | `proc_interface.c: net_guard_proc_show()` |
+| 38 | 顯示目前封鎖 IP | `proc_interface.c: net_guard_proc_show()` |
+| 39 | 讓 userspace 腳本用 `+IP` / `-IP` 同步封鎖清單 | `proc_interface.c: net_guard_proc_write()` |
 
 ## 偵測與封鎖參數
 

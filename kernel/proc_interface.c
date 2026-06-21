@@ -19,6 +19,8 @@
 #include <linux/spinlock.h>
 #include <linux/inet.h>
 #include <linux/string.h>
+#include <linux/uaccess.h>
+#include <linux/version.h>
 
 #include "proc_interface.h"
 #include "detector.h"
@@ -122,20 +124,73 @@ static int net_guard_proc_open(struct inode *inode, struct file *file)
     return single_open(file, net_guard_proc_show, NULL);
 }
 
-/* proc 檔案操作 */
+/* ------------------------------------------------------------------ */
+/* 使用者空間同步封鎖清單                                               */
+/* 格式：echo "+192.168.1.10" > /proc/net_guard                         */
+/*       echo "-192.168.1.10" > /proc/net_guard                         */
+/* ------------------------------------------------------------------ */
+static ssize_t net_guard_proc_write(struct file *file,
+                                    const char __user *buffer,
+                                    size_t count,
+                                    loff_t *ppos)
+{
+    char cmd[64];
+    char *ip_text;
+    __be32 ip;
+
+    if (count == 0)
+        return 0;
+
+    if (count >= sizeof(cmd))
+        return -EINVAL;
+
+    if (copy_from_user(cmd, buffer, count))
+        return -EFAULT;
+
+    cmd[count] = '\0';
+    strim(cmd);
+
+    if (cmd[0] != '+' && cmd[0] != '-')
+        return -EINVAL;
+
+    ip_text = strim(cmd + 1);
+    if (!in4_pton(ip_text, -1, (u8 *)&ip, -1, NULL))
+        return -EINVAL;
+
+    if (cmd[0] == '+')
+        proc_add_blocked_ip(ip);
+    else
+        proc_remove_blocked_ip(ip);
+
+    return count;
+}
+
+/* proc 檔案操作：Linux 5.6+ 使用 proc_ops，較舊 kernel 使用 file_operations */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 6, 0)
 static const struct proc_ops net_guard_proc_ops = {
     .proc_open    = net_guard_proc_open,
     .proc_read    = seq_read,
+    .proc_write   = net_guard_proc_write,
     .proc_lseek   = seq_lseek,
     .proc_release = single_release,
 };
+#else
+static const struct file_operations net_guard_proc_ops = {
+    .owner   = THIS_MODULE,
+    .open    = net_guard_proc_open,
+    .read    = seq_read,
+    .write   = net_guard_proc_write,
+    .llseek  = seq_lseek,
+    .release = single_release,
+};
+#endif
 
 /* ------------------------------------------------------------------ */
 /* 功能30: 建立 /proc/net_guard                                         */
 /* ------------------------------------------------------------------ */
 int proc_interface_init(void)
 {
-    proc_entry = proc_create(PROC_NAME, 0444, NULL, &net_guard_proc_ops);
+    proc_entry = proc_create(PROC_NAME, 0644, NULL, &net_guard_proc_ops);
     if (!proc_entry) {
         pr_err("net_guard: 無法建立 /proc/%s\n", PROC_NAME);
         return -ENOMEM;

@@ -213,6 +213,12 @@ sudo netguardctl unban 203.0.113.10
 | `sudo netguardctl install-cron` | 安裝 autoblock/cleanup 排程 |
 | `sudo netguardctl remove-cron` | 移除 autoblock/cleanup 排程 |
 
+查詢型指令沒有結果時會顯示：
+
+```text
+None
+```
+
 ## 功能對照表
 
 | 編號 | 說明 | 實作位置 |

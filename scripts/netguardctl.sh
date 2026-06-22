@@ -85,7 +85,7 @@ tail_lines() {
     if [ -s "$file" ]; then
         tail -n "$count" "$file"
     else
-        echo "(empty) $file"
+        echo "None"
     fi
 }
 
@@ -95,13 +95,21 @@ show_banned() {
         exit 1
     fi
 
+    result="$(mktemp)"
     awk '
         /^Currently Blocked IPs:/ { in_list = 1; next }
         /^=+/ { if (in_list) exit }
         in_list {
             gsub(/^ +| +$/, "", $0)
             if ($0 != "" && $0 != "(none)") print $0
-        }' "$PROC_NODE"
+        }' "$PROC_NODE" > "$result"
+
+    if [ -s "$result" ]; then
+        cat "$result"
+    else
+        echo "None"
+    fi
+    rm -f "$result"
 }
 
 manual_ban() {
@@ -159,7 +167,7 @@ case "$cmd" in
         if [ -s "$VIOLATION_DB" ]; then
             cat "$VIOLATION_DB"
         else
-            echo "(no violations)"
+            echo "None"
         fi
         ;;
     banned)
@@ -217,7 +225,7 @@ case "$cmd" in
         ;;
     cron)
         need_root
-        crontab -l 2>/dev/null | grep -E "$SCRIPT_DIR/(autoblock|cleanup)\.sh" || echo "(no Net Guard cron entries)"
+        crontab -l 2>/dev/null | grep -E "$SCRIPT_DIR/(autoblock|cleanup)\.sh" || echo "None"
         ;;
     install-cron)
         need_root
